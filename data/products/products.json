@@ -7,7 +7,7 @@
     "isActive": true,
     "netPrice": 24.99,
     "grossPrice": 29.74,
-    "syncedAt": "2026-06-03T09:55:08.632Z"
+    "syncedAt": "2026-06-03T10:59:04.482Z"
   },
   {
     "shopwareId": "sw-prod-1002",
@@ -17,6 +17,6 @@
     "isActive": true,
     "netPrice": 34.99,
     "grossPrice": 41.64,
-    "syncedAt": "2026-06-03T09:55:08.632Z"
+    "syncedAt": "2026-06-03T10:59:04.482Z"
   }
 ]
