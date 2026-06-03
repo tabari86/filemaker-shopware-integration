@@ -1,0 +1,22 @@
+[
+  {
+    "shopwareId": "sw-prod-1001",
+    "productNumber": "BOOK-001",
+    "productName": "API Design Fundamentals",
+    "stockQuantity": 42,
+    "isActive": true,
+    "netPrice": 24.99,
+    "grossPrice": 29.74,
+    "syncedAt": "2026-06-03T09:55:08.632Z"
+  },
+  {
+    "shopwareId": "sw-prod-1002",
+    "productNumber": "BOOK-002",
+    "productName": "Modern E-Commerce Integration",
+    "stockQuantity": 18,
+    "isActive": true,
+    "netPrice": 34.99,
+    "grossPrice": 41.64,
+    "syncedAt": "2026-06-03T09:55:08.632Z"
+  }
+]
