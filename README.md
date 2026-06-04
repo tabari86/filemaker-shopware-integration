@@ -42,17 +42,19 @@ The project is designed to show integration thinking, not only basic CRUD endpoi
 
 ## Features
 
-| Feature                    | Description                                                       |
-| -------------------------- | ----------------------------------------------------------------- |
-| Health Endpoint            | Basic service availability check                                  |
-| Sync Status Endpoint       | Shows current synchronization state                               |
-| Mock Authentication Flow   | Simulates Shopware authentication                                 |
-| Product Synchronization    | Imports product data from Shopware-style source                   |
-| Order Synchronization      | Imports order data including customer and line item information   |
-| Data Mapping Layer         | Converts Shopware-style JSON into FileMaker-style records         |
-| FileMaker Simulation       | Stores synchronized data in local JSON files                      |
-| Dashboard Sync Flow        | Simulates a FileMaker dashboard script triggering synchronization |
-| Mock / Real Mode Structure | Prepared for later real Shopware API integration                  |
+| Feature                    | Description                                                                   |
+| -------------------------- | ------------------------------------------------------------------------------|
+| Health Endpoint            | Basic service availability check                                              |
+| Sync Status Endpoint       | Shows current synchronization state                                           |
+| Mock Authentication Flow   | Simulates Shopware authentication                                             |
+| Product Synchronization    | Imports product data from Shopware-style source                               |
+| Order Synchronization      | Imports order data including customer and line item information               |
+| Data Mapping Layer         | Converts Shopware-style JSON into FileMaker-style records                     |
+| FileMaker Simulation       | Stores synchronized data in local JSON files                                  |
+| Dashboard Sync Flow        | Simulates a FileMaker dashboard script triggering synchronization             |
+| Sync Logging               | Records synchronization history for products, orders and dashboard executions |
+| Integration History API    | Provides access to synchronization logs through a dedicated endpoint          |
+| Mock / Real Mode Structure | Prepared for later real Shopware API integration                              |
 
 ---
 
@@ -80,6 +82,7 @@ The project is designed to show integration thinking, not only basic CRUD endpoi
 | GET    | `/api/orders`        | Fetch mock Shopware orders                  |
 | POST   | `/api/orders/sync`   | Synchronize orders into FileMaker storage   |
 | POST   | `/api/sync/all`      | Run dashboard-style synchronization flow    |
+| GET    | `/api/sync/logs`     | Retrieve synchronization history logs       |
 
 ---
 
@@ -218,12 +221,14 @@ Implemented:
 * Data mapping layer
 * JSON-based FileMaker simulation
 * Dashboard-style synchronization flow
+* Synchronization history logging
+
 
 Planned improvements:
 
 * Inventory synchronization
 * Bidirectional update flow
-* Error logging
+* Error and exception logging
 * More detailed API flow documentation
 * Optional real Shopware API mode
 
@@ -237,11 +242,13 @@ Additional project documentation can be found in the `docs` directory:
 - [API Flow](docs/api-flow.md)
 - [FileMaker Script Notes](docs/filemaker-script-reference.md)
 
+---
+
 ## Why this project matters
 
 This project is not meant to be a generic CRUD API.
 
-It demonstrates practical backend integration concepts such as authentication handling, synchronization logic, mapping external API responses into internal business records, and separating system-specific concerns into clear layers.
+It demonstrates practical backend integration concepts such as authentication handling, synchronization logic, integration monitoring, synchronization history tracking, mapping external API responses into internal business records, and separating system-specific concerns into clear layers.
 
 The project is based on a real FileMaker and Shopware 6 integration scenario and has been rebuilt as a clean, reviewable portfolio project.
 

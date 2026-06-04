@@ -1,1 +1,39 @@
-[]
+[
+{
+"id": "sync-001",
+"createdAt": "2026-06-04T06:00:00.000Z",
+"entity": "products",
+"direction": "shopware-to-filemaker",
+"status": "success",
+"savedCount": 2,
+"startedAt": "2026-06-04T06:00:00.000Z",
+"finishedAt": "2026-06-04T06:00:01.000Z",
+"mode": "mock"
+},
+{
+"id": "sync-002",
+"createdAt": "2026-06-04T06:00:02.000Z",
+"entity": "orders",
+"direction": "shopware-to-filemaker",
+"status": "success",
+"savedCount": 1,
+"startedAt": "2026-06-04T06:00:02.000Z",
+"finishedAt": "2026-06-04T06:00:03.000Z",
+"mode": "mock"
+},
+{
+"id": "sync-003",
+"createdAt": "2026-06-04T06:00:04.000Z",
+"entity": "dashboard",
+"direction": "dashboard-triggered-sync",
+"status": "success",
+"savedCount": 3,
+"startedAt": "2026-06-04T06:00:04.000Z",
+"finishedAt": "2026-06-04T06:00:05.000Z",
+"mode": "mock",
+"details": {
+"products": 2,
+"orders": 1
+}
+}
+]
