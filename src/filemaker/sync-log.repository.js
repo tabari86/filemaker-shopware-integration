@@ -1,38 +1,22 @@
-const fs = require("fs/promises");
-const path = require("path");
-const { randomUUID } = require("crypto");
-
-const SYNC_LOG_FILE = path.join(
-  __dirname,
-  "../../data/logs/sync-log.json"
-);
-
-async function readSyncLogs() {
-  const fileContent = await fs.readFile(SYNC_LOG_FILE, "utf-8");
-  return JSON.parse(fileContent);
-}
+const SyncLog = require("../models/sync-log.model");
 
 async function createSyncLog(entry) {
-  const logs = await readSyncLogs();
-
-  const logEntry = {
-    id: randomUUID(),
-    createdAt: new Date().toISOString(),
-    ...entry
-  };
-
-  logs.push(logEntry);
-
-  await fs.writeFile(
-    SYNC_LOG_FILE,
-    JSON.stringify(logs, null, 2),
-    "utf-8"
-  );
-
-  return logEntry;
+  return SyncLog.create(entry);
 }
 
-module.exports = {
-  readSyncLogs,
-  createSyncLog
-};
+async function readSyncLogs(limit = 25) {
+  const boundedLimit = Math.min(Math.max(Number(limit) || 25, 1), 100);
+  return SyncLog.find().sort({ createdAt: -1 }).limit(boundedLimit).lean();
+}
+
+async function readLatestByEntity(entities) {
+  const rows = await SyncLog.aggregate([
+    { $match: { entity: { $in: entities } } },
+    { $sort: { createdAt: -1 } },
+    { $group: { _id: "$entity", log: { $first: "$$ROOT" } } }
+  ]);
+
+  return Object.fromEntries(rows.map(({ _id, log }) => [_id, log]));
+}
+
+module.exports = { createSyncLog, readSyncLogs, readLatestByEntity };

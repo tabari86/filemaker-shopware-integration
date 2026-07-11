@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: filemaker-shopware-integration
+    runtime: node
+    plan: free
+    region: frankfurt
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/ready
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 30
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGODB_DB_NAME
+        value: FilemakerShopwareIntegration
+      - key: MONGODB_URI
+        sync: false
+      - key: API_KEY
+        sync: false

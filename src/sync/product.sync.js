@@ -4,35 +4,48 @@ const { saveProducts } = require("../filemaker/product.repository");
 const { createSyncLog } = require("../filemaker/sync-log.repository");
 
 async function syncProducts() {
-  const startedAt = new Date().toISOString();
+  const startedAt = new Date();
 
-  const shopwareProducts = await fetchProducts();
+  try {
+    const shopwareProducts = await fetchProducts();
+    const fileMakerProducts = shopwareProducts.map(
+      mapShopwareProductToFileMaker
+    );
+    const savedCount = await saveProducts(fileMakerProducts);
+    const finishedAt = new Date();
 
-  const fileMakerProducts = shopwareProducts.map(
-    mapShopwareProductToFileMaker
-  );
+    await createSyncLog({
+      entity: "products",
+      direction: "shopware-to-filemaker-simulation",
+      status: "success",
+      savedCount,
+      startedAt,
+      finishedAt,
+      mode: "mock"
+    });
 
-  const savedCount = await saveProducts(fileMakerProducts);
+    return {
+      entity: "products",
+      direction: "shopware-to-filemaker-simulation",
+      source: "simulated-shopware",
+      target: "mongodb-backed-filemaker-simulation",
+      mode: "mock",
+      savedCount
+    };
+  } catch (error) {
+    await createSyncLog({
+      entity: "products",
+      direction: "shopware-to-filemaker-simulation",
+      status: "failure",
+      savedCount: 0,
+      startedAt,
+      finishedAt: new Date(),
+      mode: "mock",
+      details: { message: "Product synchronization failed" }
+    }).catch(() => {});
 
-  const finishedAt = new Date().toISOString();
-
-  await createSyncLog({
-    entity: "products",
-    direction: "shopware-to-filemaker",
-    status: "success",
-    savedCount,
-    startedAt,
-    finishedAt,
-    mode: "mock"
-  });
-
-  return {
-    entity: "products",
-    direction: "shopware-to-filemaker",
-    source: "shopware",
-    target: "filemaker-simulation",
-    savedCount
-  };
+    throw error;
+  }
 }
 
 module.exports = {

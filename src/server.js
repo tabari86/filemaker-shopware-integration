@@ -1,38 +1,54 @@
-const healthRoutes = require("./routes/health.routes");
-const express = require("express");
 const dotenv = require("dotenv");
+dotenv.config({ quiet: true });
 const config = require("./config/env");
-const authRoutes = require("./routes/auth.routes");
-const productRoutes = require("./routes/product.routes");
-const orderRoutes = require("./routes/order.routes");
-const syncRoutes = require("./routes/sync.routes");
+const { connectDatabase, disconnectDatabase } = require("./config/database");
+const { initializeIndexes } = require("./models");
 
-dotenv.config();
+async function startServer() {
+  try {
+    config.validateRuntimeConfig();
+  } catch (error) {
+    console.error(`Startup failed: ${error.message}`);
+    process.exitCode = 1;
+    return;
+  }
 
-const app = express();
+  try {
+    await connectDatabase();
+    await initializeIndexes();
+  } catch {
+    console.error("Startup failed: database connection or initialization failed");
+    await disconnectDatabase().catch(() => {});
+    process.exitCode = 1;
+    return;
+  }
 
-app.use(express.json());
-
-const PORT = config.port;
-
-app.get("/", (req, res) => {
-  res.json({
-    project: "FileMaker-Shopware Integration",
-    status: "running",
-    version: "1.0.0"
+  const app = require("./app");
+  const server = app.listen(config.port, "0.0.0.0", () => {
+    console.log(`Service listening on 0.0.0.0:${config.port} (${config.nodeEnv})`);
   });
-});
 
-app.use("/api", healthRoutes);
+  server.on("error", async () => {
+    console.error("Startup failed: HTTP server could not start");
+    await disconnectDatabase().catch(() => {});
+    process.exit(1);
+  });
 
-app.use("/api", authRoutes);
+  let shuttingDown = false;
+  async function shutdown(signal) {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    console.log(`${signal} received; shutting down`);
+    server.close(async (error) => {
+      try { await disconnectDatabase(); } finally { process.exit(error ? 1 : 0); }
+    });
+  }
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
+}
 
-app.use("/api", productRoutes);
-
-app.use("/api", syncRoutes);
-
-app.use("/api", orderRoutes);
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+startServer().catch(async () => {
+  console.error("Startup failed: unexpected initialization error");
+  await disconnectDatabase().catch(() => {});
+  process.exit(1);
 });

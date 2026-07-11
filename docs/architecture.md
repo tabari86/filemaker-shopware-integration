@@ -1,66 +1,24 @@
-# FileMaker – Shopware 6 Integration Architecture
+# Architecture
 
-## Project Background
+## Historical system
 
-This repository is a simplified reconstruction of a real-world integration project implemented between Claris FileMaker and Shopware 6.
+The original private project used FileMaker dashboard scripts to exchange business data with a live Shopware installation. That production history motivates this repository's layering, but the public application does not connect to either system.
 
-The original production system synchronized multiple business entities between both platforms, including:
+## Portfolio reconstruction
 
-* Products
-* Orders
-* Inventory and stock updates
-* Sales channel data
-* Related e-commerce information
+The portfolio service runs Express 5 on Node.js. Fixed simulated Shopware services provide products and orders, mappers translate them, synchronization services coordinate MongoDB-backed repositories, and every run records success or failure.
 
-The goal of this repository is to demonstrate the core integration architecture without requiring a FileMaker or Shopware installation.
+```text
+Client or FileMaker-style trigger
+  -> Render / Express
+  -> API-key middleware and routes
+  -> simulated Shopware source, mappers, sync services
+  -> MongoDB repositories
+  -> MongoDB Atlas
+```
 
----
+MongoDB Atlas supplies durable persistence. JSON files under `data/` are static review examples only; synchronization never reads or modifies them. Unique indexes and upserts make repeated product and order imports idempotent.
 
-## High-Level Architecture
+Public liveness and MongoDB readiness endpoints support operations. Protected endpoints require `x-api-key`. Startup validates configuration, connects, and initializes indexes before listening. Shutdown closes HTTP and MongoDB cleanly.
 
-FileMaker (Business System)
-
-↓
-
-Authentication Layer
-
-↓
-
-Shopware 6 REST API
-
-↓
-
-Data Mapping & Transformation Layer
-
-↓
-
-FileMaker Data Storage
-
----
-
-## Authentication
-
-Two authentication methods were used in the original project:
-
-### Product Endpoints
-
-* sw-access-key
-
-### Administrative Endpoints
-
-* OAuth2 Client Credentials
-* Bearer Token
-
----
-
-## MVP Scope
-
-The portfolio version focuses on:
-
-* Product synchronization
-* Order synchronization
-* Inventory synchronization
-* Error logging
-* Data mapping
-
-The implementation uses local JSON files to simulate FileMaker tables.
+`POST /api/sync/all` models the trigger concept of the historical FileMaker dashboard. It runs product and order imports and persists a summary; it is not a live FileMaker connection. Failures attempt safe persistent logging and then propagate to centralized error handling without exposing stacks or credentials.

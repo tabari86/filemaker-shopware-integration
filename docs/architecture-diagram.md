@@ -1,127 +1,28 @@
-# Architecture Diagram
+# Architecture diagrams
 
-This document explains the difference between the original production architecture and the simplified portfolio reconstruction.
-
----
-
-## 1. Original Production Architecture
-
-The original system was implemented with Claris FileMaker scripts that communicated directly with the Shopware 6 API.
+## Historical context
 
 ```text
-┌─────────────────────┐
-│ FileMaker Dashboard │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│  FileMaker Script   │
-└──────────┬──────────┘
-           │ HTTPS / REST / JSON
-           ▼
-┌─────────────────────┐
-│   Shopware 6 API    │
-└──────────┬──────────┘
-           │
-           ▼
-┌──────────────────────────────────────────┐
-│ Products │ Orders │ Inventory │ Shop Data│
-└──────────────────────────────────────────┘
+FileMaker dashboard -> FileMaker scripts -> live Shopware API
 ```
 
-In this setup, FileMaker was the central business system. Synchronization was triggered manually from the FileMaker dashboard and exchanged data between FileMaker and Shopware 6.
+This describes the source scenario only. It is separate from the running portfolio application.
 
----
-
-## 2. Portfolio Reconstruction Architecture
-
-This repository rebuilds the integration logic in Node.js and Express so the project can be reviewed and executed without requiring FileMaker or Shopware.
+## Portfolio reconstruction
 
 ```text
-┌─────────────────────┐
-│     Express API     │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│       Routes        │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│ Shopware Services   │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│   Mapping Layer     │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│ Repository Layer    │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│ JSON File Storage   │
-└─────────────────────┘
+Client
+  |
+  +--> GET /, /api/health, /api/ready -----------------+
+  |                                                    |
+  +--> protected routes -> API-key middleware ---------+-> Express on Render
+                                                            |
+Simulated Shopware products/orders -> mappers -> sync services
+                                                            |
+                                                            +-> MongoDB repositories -> MongoDB Atlas
+                                                            +-> persistent success/failure logs
 ```
 
-The repository uses local JSON files to simulate FileMaker tables while preserving the overall synchronization architecture.
+Render hosts the proposed Node process and Atlas remains external durable storage. Static JSON samples are not runtime persistence. No component calls a live Shopware or FileMaker instance.
 
----
-
-## 3. Dashboard Synchronization Flow
-
-The original project used a FileMaker dashboard script to trigger synchronization tasks.
-
-The portfolio version simulates the same process through a dedicated synchronization endpoint.
-
-```text
-┌─────────────────────┐
-│ POST /api/sync/all  │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│ Dashboard Sync Flow │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│   Product Sync      │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│    Order Sync       │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│ Data Mapping Layer  │
-└──────────┬──────────┘
-           │
-           ▼
-┌─────────────────────┐
-│ FileMaker Simulation│
-└─────────────────────┘
-```
-
----
-
-## Why this structure was chosen
-
-The original project depended on FileMaker and Shopware credentials and could not be published publicly.
-
-For a public GitHub portfolio project, this reconstruction keeps the same integration concepts while removing external dependencies.
-
-Benefits:
-
-* Easy to run locally
-* Safe to publish publicly
-* Easy for recruiters to review
-* Demonstrates real integration architecture
-* Can later be extended with real Shopware API connections
-* Preserves the original synchronization workflow
+The FileMaker-style dashboard endpoint runs the product and order flows sequentially and stores its own summary log. Stored history drives the dynamic synchronization status endpoint.

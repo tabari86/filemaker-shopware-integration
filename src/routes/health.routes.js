@@ -1,22 +1,33 @@
 const express = require("express");
+const config = require("../config/env");
+const { pingDatabase } = require("../config/database");
 
 const router = express.Router();
 
 router.get("/health", (req, res) => {
   res.status(200).json({
     status: "healthy",
-    service: "filemaker-shopware-integration",
-    version: "1.0.0",
+    service: config.serviceName,
+    version: config.version,
     timestamp: new Date().toISOString()
   });
 });
 
-router.get("/sync-status", (req, res) => {
-  res.status(200).json({
-    products: "not synchronized",
-    orders: "not synchronized",
-    inventory: "not synchronized"
-  });
+router.get("/ready", async (req, res) => {
+  try {
+    await pingDatabase();
+    res.status(200).json({
+      status: "ready",
+      service: config.serviceName,
+      timestamp: new Date().toISOString()
+    });
+  } catch {
+    res.status(503).json({
+      status: "not-ready",
+      service: config.serviceName,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 module.exports = router;
