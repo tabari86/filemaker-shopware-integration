@@ -1,38 +1,51 @@
 const express = require("express");
-const { readOrders } = require("../filemaker/order.repository");
-const { syncOrders } = require("../sync/order.sync");
-const apiKey = require("../middleware/api-key.middleware");
+const {
+  readOrders,
+  findOrderByOrderNumber
+} = require("../filemaker/order.repository");
+const { runOrderSync } = require("../sync/order.sync");
+const {
+  parseOrderQuery,
+  parseIdentifier,
+  buildPagination
+} = require("../utils/query-options");
+const { ApiError } = require("../utils/api-error");
 
 const router = express.Router();
 
-function parseLimit(value) {
-  if (value === undefined) return 25;
-
-  if (!/^\d+$/.test(value) || Number(value) < 1 || Number(value) > 100) {
-    const error = new Error("limit must be an integer from 1 to 100");
-    error.status = 400;
-    throw error;
-  }
-
-  return Number(value);
-}
-
-router.get("/orders", apiKey, async (req, res) => {
-  const orders = await readOrders(parseLimit(req.query.limit));
+router.get("/orders", async (req, res) => {
+  const options = parseOrderQuery(req.query);
+  const { items, total } = await readOrders(options);
 
   res.status(200).json({
     success: true,
-    count: orders.length,
-    data: orders
+    requestId: req.requestId,
+    data: items,
+    pagination: buildPagination(options.page, options.limit, total)
   });
 });
 
-router.post("/orders/sync", apiKey, async (req, res) => {
-  const result = await syncOrders();
+router.get("/orders/:orderNumber", async (req, res) => {
+  const orderNumber = parseIdentifier(req.params.orderNumber, "orderNumber");
+  const order = await findOrderByOrderNumber(orderNumber);
+
+  if (!order) {
+    throw new ApiError(404, "ORDER_NOT_FOUND", "Order not found");
+  }
 
   res.status(200).json({
     success: true,
-    message: "Orders synchronized successfully",
+    requestId: req.requestId,
+    data: order
+  });
+});
+
+router.post("/sync/orders", async (req, res) => {
+  const result = await runOrderSync({ requestId: req.requestId });
+
+  res.status(200).json({
+    success: true,
+    requestId: req.requestId,
     data: result
   });
 });

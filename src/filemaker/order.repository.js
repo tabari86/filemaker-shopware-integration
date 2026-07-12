@@ -1,4 +1,5 @@
 const Order = require("../models/order.model");
+
 async function saveOrders(orders) {
   if (orders.length === 0) return 0;
 
@@ -18,12 +19,50 @@ async function saveOrders(orders) {
   return orders.length;
 }
 
-async function readOrders(limit = 25) {
-  const boundedLimit = Math.min(Math.max(Number(limit) || 25, 1), 100);
-  return Order.find()
-    .sort({ orderDate: -1, orderNumber: -1 })
-    .limit(boundedLimit)
-    .lean();
+function buildOrderFilter(options) {
+  const filter = {};
+
+  if (options.orderNumber !== undefined) {
+    filter.orderNumber = options.orderNumber;
+  }
+  if (options.status !== undefined) filter.status = options.status;
+  if (options.from !== undefined || options.to !== undefined) {
+    filter.orderDate = {};
+    if (options.from !== undefined) filter.orderDate.$gte = options.from;
+    if (options.to !== undefined) filter.orderDate.$lte = options.to;
+  }
+
+  return filter;
 }
 
-module.exports = { saveOrders, readOrders };
+function buildSort(sort) {
+  const selected = sort || { field: "orderDate", direction: -1 };
+  return { [selected.field]: selected.direction, _id: selected.direction };
+}
+
+async function readOrders(options = {}) {
+  const page = options.page ?? 1;
+  const limit = options.limit ?? 25;
+  const filter = buildOrderFilter(options);
+
+  const [items, total] = await Promise.all([
+    Order.find(filter)
+      .sort(buildSort(options.sort))
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+    Order.countDocuments(filter)
+  ]);
+
+  return { items, total };
+}
+
+async function findOrderByOrderNumber(orderNumber) {
+  return Order.findOne({ orderNumber }).lean();
+}
+
+module.exports = {
+  findOrderByOrderNumber,
+  readOrders,
+  saveOrders
+};

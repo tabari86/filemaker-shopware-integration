@@ -1,53 +1,106 @@
-const { fetchOrders } = require("../shopware/order.service");
-const { mapShopwareOrderToFileMaker } = require("./order.mapper");
-const { saveOrders } = require("../filemaker/order.repository");
-const { createSyncLog } = require("../filemaker/sync-log.repository");
+const orderService = require("../shopware/order.service");
+const orderMapper = require("./order.mapper");
+const orderRepository = require("../filemaker/order.repository");
+const syncLogRepository = require("../filemaker/sync-log.repository");
+const syncRunService = require("./sync-run.service");
 
-async function syncOrders() {
+const DIRECTION = "shopware-to-filemaker-simulation";
+
+function requireContext(context) {
+  if (
+    !context ||
+    !context.runId ||
+    !context.requestId ||
+    !context.trigger
+  ) {
+    throw new Error("Synchronization context is required");
+  }
+
+  return context;
+}
+
+async function syncOrders(context) {
+  const { runId, requestId, trigger } = requireContext(context);
   const startedAt = new Date();
 
   try {
-    const shopwareOrders = await fetchOrders();
+    const shopwareOrders = await orderService.fetchOrders();
     const fileMakerOrders = shopwareOrders.map(
-      mapShopwareOrderToFileMaker
+      orderMapper.mapShopwareOrderToFileMaker
     );
-    const savedCount = await saveOrders(fileMakerOrders);
+    const savedCount = await orderRepository.saveOrders(fileMakerOrders);
     const finishedAt = new Date();
 
-    await createSyncLog({
+    await syncLogRepository.createSyncLog({
       entity: "orders",
-      direction: "shopware-to-filemaker-simulation",
+      direction: DIRECTION,
       status: "success",
       savedCount,
       startedAt,
       finishedAt,
-      mode: "mock"
+      durationMs: syncRunService.durationMs(startedAt, finishedAt),
+      mode: "mock",
+      runId,
+      requestId,
+      trigger
     });
 
     return {
       entity: "orders",
-      direction: "shopware-to-filemaker-simulation",
+      direction: DIRECTION,
       source: "simulated-shopware",
       target: "mongodb-backed-filemaker-simulation",
       mode: "mock",
       savedCount
     };
   } catch (error) {
-    await createSyncLog({
+    const finishedAt = new Date();
+
+    await syncLogRepository.createSyncLog({
       entity: "orders",
-      direction: "shopware-to-filemaker-simulation",
+      direction: DIRECTION,
       status: "failure",
       savedCount: 0,
       startedAt,
-      finishedAt: new Date(),
+      finishedAt,
+      durationMs: syncRunService.durationMs(startedAt, finishedAt),
       mode: "mock",
-      details: { message: "Order synchronization failed" }
+      runId,
+      requestId,
+      trigger,
+      details: { code: syncRunService.SAFE_FAILURE_CODE }
     }).catch(() => {});
 
     throw error;
   }
 }
 
-module.exports = {
-  syncOrders
-};
+async function runOrderSync({ requestId } = {}) {
+  const run = await syncRunService.startRun({
+    scope: "orders",
+    trigger: "api-orders",
+    requestId
+  });
+  const context = {
+    runId: run.runId,
+    requestId: run.requestId,
+    trigger: run.trigger
+  };
+
+  try {
+    const result = await syncOrders(context);
+    const summary = {
+      products: 0,
+      orders: result.savedCount,
+      total: result.savedCount
+    };
+    const completedRun = await syncRunService.completeRun(run, summary);
+
+    return { ...completedRun, result };
+  } catch (error) {
+    await syncRunService.failRun(run);
+    throw error;
+  }
+}
+
+module.exports = { syncOrders, runOrderSync };

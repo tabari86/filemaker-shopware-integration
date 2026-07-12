@@ -14,7 +14,11 @@ module.exports = (req, res, next) => {
   if (!valid) {
     return res.status(401).json({
       success: false,
-      error: { message: "Invalid or missing API key" }
+      error: {
+        code: "UNAUTHORIZED",
+        message: "Invalid or missing API key",
+        requestId: req.requestId
+      }
     });
   }
 
